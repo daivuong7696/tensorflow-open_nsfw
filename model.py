@@ -101,9 +101,11 @@ class OpenNsfwModel:
                                         padding="valid", name="pool")
 
         x = tf.reshape(x, shape=(-1, 1024))
+        print("haha",x.shape)
 
         self.logits = self.__fully_connected(name="fc_nsfw",
                                              inputs=x, num_outputs=2)
+        print("hhi", self.logits)
         self.predictions = tf.nn.softmax(self.logits, name="predictions")
 
     """Get weights for layer with given name

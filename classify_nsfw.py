@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import sys
+import os
 import argparse
 import tensorflow as tf
+from shutil import copyfile
 
 from model import OpenNsfwModel, InputType
 from image_utils import create_tensorflow_image_loader
@@ -12,6 +14,14 @@ import numpy as np
 
 IMAGE_LOADER_TENSORFLOW = "tensorflow"
 IMAGE_LOADER_YAHOO = "yahoo"
+
+def classify_to_folder(args, images_names, images_scores):
+    for i in range(len(images_names)):
+        source = os.path.join(args.input_file, images_names[i])
+        dest = os.path.join(args.input_file, str(round(images_scores[i][1], 1)))
+        if not os.path.isdir(dest):
+            os.mkdir(dest)
+        copyfile(source, os.path.join(dest, images_names[i]))
 
 
 def main(argv):
@@ -54,15 +64,27 @@ def main(argv):
             fn_load_image = lambda filename: np.array([base64.urlsafe_b64encode(open(filename, "rb").read())])
 
         sess.run(tf.global_variables_initializer())
-
-        image = fn_load_image(args.input_file)
+        images = []
+        images_names = []
+        for i in os.listdir(args.input_file):
+            images_names.append(i)
+            image_path = os.path.join(args.input_file, i)
+            image = fn_load_image(image_path)
+            if images == []:
+                images = image
+                print(image_path)
+            else:
+                images = np.concatenate((images, image), axis=0)
+        image = images
 
         predictions = \
             sess.run(model.predictions,
                      feed_dict={model.input: image})
 
-        print("Results for '{}'".format(args.input_file))
-        print("\tSFW score:\t{}\n\tNSFW score:\t{}".format(*predictions[0]))
+        classify_to_folder(args, images_names, predictions)
+        #for i in range(len(images_names)):
+        #    print("Results for '{}'".format(images_names[i]))
+        #    print("\tSFW score:\t{}\n\tNSFW score:\t{}".format(*predictions[i]))
 
 if __name__ == "__main__":
     main(sys.argv)
